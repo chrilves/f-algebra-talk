@@ -1,0 +1,15 @@
+/RUNNING_PID
+/logs/
+/project/*-shim.sbt
+/project/project/
+/project/target/
+/target/
+/asmp/
+
+activator*
+.idea/
+*.iml
+*~
+*.swp
+*.vo
+*.glob
