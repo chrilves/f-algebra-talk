@@ -18,7 +18,7 @@
 [Christophe Calvès](https://www.linkedin.com/pub/christophe-calv%C3%A8s/b0/325/ab6)/
 [@chrilves](http://twitter.com/chrilves)
 
-https://github.com/christophe-calves/psug-2016-7.git
+https://github.com/christophe-calves/psug-2016.7
 
 ---
 
