@@ -1118,9 +1118,9 @@ trait MonadeSurF[M[_]] {
 }  
 ```
 
----
+----
 
-### Monade Libre
+## Monade Libre
 
 $$e.flatMap(f) = e.map(f).flatten$$
 
@@ -1192,9 +1192,9 @@ def uniqueMorphisme[M[_] : MonadeSurF, A]                    : MonadeLibre[A] =>
 def uniqueMorphisme[M[_] : Monad     , A](elem : Poly[F, M]) : MonadeLibre[A] => M[A]
 ```
 
----
+----
 
-### Monade encore plus libre
+## Monade encore plus libre
 
 Monad sur le type `F[_]`
 ```scala
