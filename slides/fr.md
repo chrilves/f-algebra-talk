@@ -700,11 +700,11 @@ def f[A](a:A) : A
 ### En résumé
 
 - *Morphisme*
- - **Structure** d'une (co-)algèbre `A` est **contenue** dans une (co-algèbre) `B`
- - **Préserve** les opérations/égalités d'une (co-)algèbre `A` vers une (co-algèbre) `B`.
+ - **Structure** d'une (co-)algèbre `A` est **contenue** dans une (co-)algèbre `B`
+ - **Préserve** les opérations/égalités d'une (co-)algèbre `A` vers une (co-)algèbre `B`
 - *IsoMorphisme*
- - Deux **structures** de (co-algèbres) sont **équivalentes**.
- - Tout ce qui se fait dans l'une, se fait **identiquement** dans l'autre.
+ - Deux **structures** de (co-)algèbres sont **équivalentes**
+ - Tout ce qui se fait dans l'une, se fait **identiquement** dans l'autre
 
 ---
 
