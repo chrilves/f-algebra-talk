@@ -1099,7 +1099,7 @@ type F[X] = (X, X)
 ```
 
 ```scala
-trait MonadSurF[M[_]] {
+trait MonadeSurF[M[_]] {
   def point[B]     :  B                 => M[B]
   def elem[B]      :  F[B]              => M[B]
 
@@ -1109,7 +1109,7 @@ trait MonadSurF[M[_]] {
 ou
 
 ```scala
-trait MonadSurF[M[_]] {
+trait MonadeSurF[M[_]] {
   def point[B]     :  B                 => M[B]
   def elem[B]      :  F[B]              => M[B]
 
@@ -1125,7 +1125,7 @@ trait MonadSurF[M[_]] {
 $$e.flatMap(f) = e.map(f).flatten$$
 
 ```scala
-trait MonadSurF[M[_]] {
+trait MonadeSurF[M[_]] {
   def point[B]     :  B                 => M[B]
   def flatten[B]   :  M[M[B]]           => M[B]
   def map[A,B]     : (M[A] , A =>   B ) => M[B]
@@ -1134,11 +1134,11 @@ trait MonadSurF[M[_]] {
 ```
 
 ```scala
-sealed abstract class MonadLibre[B]
-case class Point[B](  b : B                          ) extends MonadLibre[B]
-case class Elem[B](   b : F[B]                       ) extends MonadLibre[B]
-case class Flatten[B](e : MonadLibre[MonadLibre[B]]  ) extends MonadLibre[B]
-case class Map[A,B](  e : MonadLibre[A], f : A =>   B) extends MonadLibre[B]
+sealed abstract class MonadeLibre[B]
+case class Point[B](  b : B                            ) extends MonadeLibre[B]
+case class Elem[B](   b : F[B]                         ) extends MonadeLibre[B]
+case class Flatten[B](e : MonadeLibre[MonadeLibre[B]]  ) extends MonadeLibre[B]
+case class Map[A,B](  e : MonadeLibre[A], f : A => B   ) extends MonadeLibre[B]
 ```
 
 ----
@@ -1148,17 +1148,17 @@ case class Map[A,B](  e : MonadLibre[A], f : A =>   B) extends MonadLibre[B]
 Si `F` a **déjà** un `map`:
 
 ```scala
-sealed abstract class MonadLibre[B]
-case class Point[B](  b : B                        ) extends MonadLibre[M,B]
-case class Elem[B](   b : F[B]                     ) extends MonadLibre[M,B]
-case class Flatten[B](e : MonadLibre[MonadLibre[B]]) extends MonadLibre[M,B]
+sealed abstract class MonadeLibre[B]
+case class Point[B](  b : B                          ) extends MonadeLibre[M,B]
+case class Elem[B](   b : F[B]                       ) extends MonadeLibre[M,B]
+case class Flatten[B](e : MonadeLibre[MonadeLibre[B]]) extends MonadeLibre[M,B]
 ```
 
 ```scala
-def map[A,B](ma : MonadLibre[A])(f : A => B) : MonadLibre[B] = ma match {
+def map[A,B](ma : MonadeLibre[A])(f : A => B) : MonadeLibre[B] = ma match {
   case Point(a : A)    => Point(f(a) : B)
   case Elem(fa : F[A]) => Elem(fa.map(f) : F[B])
-  case Flatten(e : MonadLibre[MonadLibre[A]]) =>
+  case Flatten(e : MonadeLibre[MonadeLibre[A]]) =>
     // e.map(_.map(f)).flatten == e.flatten.map(f)
     Flatten( e.map(_.map(f) ) )
 }
@@ -1177,9 +1177,9 @@ Flatten(Point(b))   => b
 ```
 
 ```scala
-sealed abstract class MonadLibre[B]
-case class Point[B]      (b : B               ) extends MonadLibre[M,B]
-case class FlattenElem[B](e : F[MonadLibre[B]]) extends MonadLibre[M,B]
+sealed abstract class MonadeLibre[B]
+case class Point[B]      (b : B                ) extends MonadeLibre[B]
+case class FlattenElem[B](e : F[MonadeLibre[B]]) extends MonadeLibre[B]
 ```
 
 ```scala
@@ -1188,8 +1188,8 @@ trait Poly[F[_], M[_]] {
 }
 
 // Avec `F` déjà un foncteur !!
-def uniqueMorphisme[M[_] : MonadSurF, A](ml : MonadLibre[A])                    : M[A]
-def uniqueMorphisme[M[_] : Monad    , A](ml : MonadLibre[A])(elem : Poly[F, M]) : M[A]
+def uniqueMorphisme[M[_] : MonadeSurF, A]                    : MonadeLibre[A] => M[A]
+def uniqueMorphisme[M[_] : Monad     , A](elem : Poly[F, M]) : MonadeLibre[A] => M[A]
 ```
 
 ---
@@ -1202,7 +1202,7 @@ type F[X] = (X, X)
 ```
 
 ```scala
-trait MonadSurF[M[_]] {
+trait MonadeSurF[M[_]] {
   def point[B]     :  B                 => M[B]
   def elem[B]      :  F[B]              => M[B]
   def flatMap[A,B] : (M[A] , A => M[B]) => M[B]
@@ -1210,10 +1210,10 @@ trait MonadSurF[M[_]] {
 ```
 
 ```scala
-sealed abstract class MonadLibre[B]
-case class Point[B](b : B   )                                      extends MonadLibre[B]
-case class Elem[B](fb : F[B])                                      extends MonadLibre[B]
-case class FlatMap[A,B](e : MonadLibre[A], f : A => MonadLibre[B]) extends MonadLibre[B]
+sealed abstract class MonadeLibre[B]
+case class Point[B](b : B   )                                        extends MonadeLibre[B]
+case class Elem[B](fb : F[B])                                        extends MonadeLibre[B]
+case class FlatMap[A,B](e : MonadeLibre[A], f : A => MonadeLibre[B]) extends MonadeLibre[B]
 ```
 
 ----
@@ -1226,15 +1226,15 @@ FlatMap(FlatMap(e, f), g) => FlatMap(e, x => FlatMap(f(x), g))
 ```
 
 ```scala
-sealed abstract class MonadLibre[B]
-case class Point[B](b : B)                                extends MonadLibre[B]
-case class FlatMap[A,B](e : F[A], f : A => MonadLibre[B]) extends MonadLibre[B]
+sealed abstract class MonadePlusLibre[B]
+case class Point[B](b : B)                                     extends MonadePlusLibre[B]
+case class FlatMap[A,B](e : F[A], f : A => MonadePlusLibre[B]) extends MonadePlusLibre[B]
 ```
 
 ```scala
 // Aucune contrainte sur `F`
-def uniqueMorphisme[M[_] : MonadSurF, A](ml : MonadLibre[A])                    : M[A]
-def uniqueMorphisme[M[_] : Monad    , A](ml : MonadLibre[A])(elem : Poly[F, M]) : M[A]
+def uniqueMorphisme[M[_] : MonadeSurF, A]                    : MonadePlusLibre[A] => M[A]
+def uniqueMorphisme[M[_] : Monad     , A](elem : Poly[F, M]) : MonadePlusLibre[A] => M[A]
 ```
 
 ---
