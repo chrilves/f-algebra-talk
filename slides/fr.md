@@ -324,13 +324,13 @@ case class  Plus[+A](gauche : A, droit : A) extends OperationPSUG[A]
 ```scala
 def traitVersFonction[A](t : AlgebrePSUG[A]       ) : OperationPSUG[A] => A =
   (opa : OperationPSUG[A]) => opa match {
-    case Vide      => t.vide
+    case Zero      => t.zero
     case Plus(g,d) => t.plus(g,d)
   }
 
 def fonctionVersTrait[A](f : OperationPSUG[A] => A) : AlgebrePSUG[A]        =
   new AlgebrePSUG[A] {
-    def vide              : A = f(Vide)
+    def zero              : A = f(Zero)
     def plus(g : A, d: A) : A = f(Plus(g,d))
   }
 ```
