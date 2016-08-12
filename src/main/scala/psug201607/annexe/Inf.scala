@@ -40,7 +40,7 @@ abstract class Inf[A] { self =>
   final def takeWhile(p : A => Boolean): List[A] = {
     val x = self.head
 
-    if (p(x)) x :: self.takeWhile(p)
+    if (p(x)) x :: self.tail.takeWhile(p)
     else List.empty
   }
 
