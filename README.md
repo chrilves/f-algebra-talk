@@ -1,15 +1,16 @@
-# Code source du [PSUG #64](https://www.meetup.com/fr-FR/Paris-Scala-User-Group-PSUG/events/232665213/)
-## Voyage au pays des Case Class
-### Algèbre abstraite pour dévelopeu.r.se concrèt.e
+# Modéliser *astucieusement* vos données : des énumérations aux algèbres libres
+
+Code source de la présentation du [ScalaIO.2017](http://scala.io)
 
 
-Ce sont les sources du 64ième meetup du [Paris Scala User Group](http://www.meetup.com/fr-FR/Paris-Scala-User-Group-PSUG).
+## Présentation
 
-### Présentation
 
-La présentation est dans le fichier [slides/fr.md](https://github.com/christophe-calves/psug-2016.7/blob/master/slides/fr.md), lisible avec [reveal-md](https://github.com/webpro/reveal-md) : `cd slides && reveal-md fr.md` .
+La présentation est dans le fichier [slides/fr.md](https://github.com/chrilves/f-algebra-talk.git/blob/master/slides/fr.md), lisible avec [reveal-md](https://github.com/webpro/reveal-md) : `cd slides && reveal-md fr.md` .
 
-### Sources Scala
+
+## Sources Scala
+
 
 Les sources [Scala](http://www.scala-lang.org/) suivent scrupuleusement la présentation. Elles sont organisées en packages numérotés correspondants aux chapitres de la présentation.
 

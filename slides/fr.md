@@ -1,5 +1,5 @@
 <!--
-- title : Voyage au pays des Case-Classes, Algèbre abstraite pour dévelopeu.r.se concrèt.e .
+- title : Modéliser astucieusement vos données: des énumérations aux algèbres libres
 - description :
 - author : Christophe Calvès
 - theme : league
@@ -7,602 +7,580 @@
 - slideNumber : true -->
 
 <style type="text/css">
-  .reveal li code { font-size:  70%;    }
+  .reveal li code { font-size:  100%; width : 600pt; }
 </style>
 
 
-# Voyage au pays des
-# Case Class
-### Algèbre abstraite pour dévelopeu.r.se concrèt.e
+# Modéliser *astucieusement*
+# vos données
+### des énumérations aux algèbres libres
 
-[Christophe Calvès](https://www.linkedin.com/pub/christophe-calv%C3%A8s/b0/325/ab6)/
-[@chrilves](http://twitter.com/chrilves)
+*Christophe Calvès* [@chrilves](http://twitter.com/chrilves) / [MFG Labs](http://mfglabs.com)
+https://github.com/chrilves/f-algebra-talk.git
 
-https://github.com/christophe-calves/psug-2016.7
+----
 
----
-
-# Lectures Conseillées
-
-<a href="https://www.labri.fr/perso/casteran/CoqArt/"><img src="coqart.jpg" alt="Coq'Art"                         style="width: 400px; height: 610px;"/></a>
-<a href="https://global.oup.com/academic/product/category-theory-9780199237180?cc=ru&lang=en&"><img src="awodey.jpg" alt="Steven Awodey - Category Theory" style="width: 400px; height: 610px;"/></a>
-
----
-
-# Soyons cohérents
-### Ne fraudons pas!
-- `null`
-- les exceptions
-- `asInstanceOf` / `isInstanceOf` (sauf sommes)
-- effets de bord
-- reflexion
-- Récursion générale
-
----
-
-# Case Class?
+## Pourquoi s'y intéresser!
 
 ```scala
-case class Voiture(model : String, portes : Int, couleur : String)
+final case class Either[A,B](left : Option[A], right : Option[B])
 ```
 
-```scala
-val voiture : Voiture = Voiture("206", 3, "Blanche")
-```
+- Les *types* de données sont le **reflet** du *domaine métier*
+- **Tout** le code **en dépend**
+- Une modélisation **incorrecte**
+ - est la porte ouverte aux **bugs**
+ - **obscurcit** la logique du code
+- Une modélisation **fidèle** expose l'**intention**, la **logique métier**
 
 ```scala
-def penture(v : Voiture, c : String) : Voiture = v match {
-  case Voiture(model, portes, couleur) => Voiture(model, portes, c)
-}
+scala> val x = Either[Int, String](None, None)
+x: Either[Int,String] = Either(None,None)
 ```
 
 ----
 
-### Familles scélées
+# Libéré·e, Délivré·e
+
+- Nous ne sommes **pas limités·e·s** aux classiques : *strings*, *nombres*, *octets*, *listes*, ...
+- **Tout** est **possible**, du moment que c'est **cohérent**
+- Nous avons toute la **créativité**, la **liberté** et la **puissance** des *maths* pour modéliser *correctement* nos données.
+
+
+---
+
+## *Qu'est ce* qu'une Présentation?
+
+- Du **texte** : bla bla bla
+- Des **images**
+<img src="arsenal.jpg" alt="lapin" style="width: 400px; boder: none; boder-width :0px"/>
+
+- Du **code**
+```scala
+final abstract class InstantiateThisIfYouCan {
+    def apply[A] : A 
+}
+```
+- Des listes à **puces**
+ - de la **concaténation**
+ - des **grilles**
+
+
+----
+
+## *Qu'est-ce* qu'une Présentation?
+
+- Une *valeur* `p` d'un *type*/*ensemble*/*espace* `P`
+- des opérations de **base**
+```scala
+def vide : P
+def texte(s : String) : P
+def image(f: File) : P
+def code(lecode : String) : P
+```
+- Des **compositions**
+```scala
+def concat(p1 : P, p2 : P) : P
+def puces(ps : List[P]) : P
+def grille(mat : List[List[P]]) : P
+```
+- Des **lois** à respecter
+```scala
+concat(vide, p)          == p == concat(p, vide)
+concat(a, concat(b, c))  == concat(concat(a,b), c)
+concat(text(a), text(b)) == text(a + b)
+```
+
+
+----
+
+### Algèbre de Présentation
 
 ```scala
-sealed abstract class Couleur
-case object Carreaux extends Couleur
-case object Coeur    extends Couleur
-case object Pique    extends Couleur
-case object Trefle   extends Couleur
+trait Presentation[P] {
+  def vide                        : P
+  def concat(p1 : P, p2 : P)      : P
+
+  def texte(s : String)           : P    
+  def image(f: File)              : P
+  def code(lecode: String)        : P
+
+  def puces(ps : List[P])         : P
+  def grille(mat : List[List[P]]) : P
+
+  // concat(vide, p)          == p == concat(p, vide)
+  // concat(a, concat(b, c))  == concat(concat(a,b), c)
+  // concat(text(a), text(b)) == text(a + b)
+}
+```
+
+---
+
+# Exemples d'Algèbres
+
+```scala
+trait Monoid[P] {
+  def vide                   : P
+  def concat(p1 : P, p2 : P) : P
+
+  // concat(vide, p)         == p == concat(p, vide)
+  // concat(a, concat(b, c)) == concat(concat(a,b), c)
+}
 ```
 
 ```scala
-def rouge(c : Couleur) : Boolean = c match {
-  case Carreaux => true
-  case Coeur    => true
-  case Pique    => false
-  case Trefle   => false
+trait Monad[P[_]] {
+  def pure[A](a : A)                        : P[A]
+  def flatMap[X,A](p : P[X], f : X => P[A]) : P[A]
+
+  // flatMap(pure(a), f)      == f(a)
+  // flatMap(pa, pure)        == pa
+  // flatMap(flatMap(p,f), g) == flatMap(p, x => flatMap(f(x), g)) 
 }
 ```
 
 ----
-
-### Les Listes
-
-```scala
-sealed abstract class Liste[+A]
-final case object Vide                                 extends Liste[Nothing]
-final case class  Cons[+A](tete : A, reste : Liste[A]) extends Liste[A]
-```
-
-```scala
-val vide         = Vide
-val singleton    = Cons(1, Vide)
-val deuxValeurs  = Cons(3, singleton)
-val deuxValeurs2 = Cons(3, Cons(1, Vide))
-
-assert(deuxValeurs == deuxValeurs2)
-```
-
-```scala
-def taille[A](l : Liste[A]) : Int = l match {
-  case Vide           => 0
-  case Cons(_, reste) => 1 + taille(reste)
-}
-```
-
----
-
-# Pitch
-
-```scala
-sealed abstract class ListeP[+A]
-case object VideP                                  extends ListeP[Nothing]
-case class  ConsP[+A](tete : A, reste : ListeP[A]) extends ListeP[A]
-
-trait ListeI[+A] {
-  def fold[R](vide : R)(cons : (A, R) => R) : R
-}
-```
-
-```scala
-type StreamP[+A] = scala.collection.immutable.Stream[A]
-
-trait StreamI[+A] {
-  def matcher[R](vide : R)(cons : (A, StreamI[A]) => R) : R
-}
-```
-
----
 
 # Bijection
 
-
 ```
-trait <=>[A,B] {
-  def from(a : A) : B
-  def to(b : B)   : A
+trait (A <-> B) {
+  def from(a : A) : B  // to(from(a)) == a
+  def to(b : B)   : A  // from(to(b)) == b
 }
 ```
+    
+`A` et `B` sont **"équivalents"**
 
 ```scala
-"idA" -> forAll( (a:A) => to(from(a)) == a)
-"idB" -> forAll( (b:B) => from(to(b)) == b)
-```
+def optionIsEither[A] : Option[A]   <-> Either[Unit, A]
 
-```scala
-def optionIsEither[A] : Option[A]   <=> Either[Unit, A]
-def string            : List[Char]  <=> String
-def const[A]          : (Unit => A) <=> A
+def string            : List[Char]  <-> String
+
+def const[A]          : Unit => A   <-> A
+
+def curry[A,B,C]      : A => B => C <-> (A,B) => C
 ```
 
 ----
 
-### Produit
-*model* **ET** *portes* **ET** *couleur*
+# Équivalences
 
 ```scala
-final case class VoitureP(model : String, portes : Int, couleur : String)
-
-trait VoitureI {
-  def matcher[R](consomateur : (String, Int, String) => R) : R
-}
-
-def VoitureI(model : String, portes : Int, couleur : String) = new VoitureI {
-    def matcher[R](f: (String, Int, String) => R): R = f(model, portes, couleur)
+trait Monoid[P] {
+  def vide                   : P
+  def concat(p1 : P, p2 : P) : P
 }
 ```
+```scala
+trait Monoid[P] {
+  def vide(x : Unit)      : P // Unit => P    <-> P
+  def concat(p1 : (P, P)) : P // P => P => P  <-> (P,P) => P
+}
+```
+```scala
+trait Monoid[P] {
+  def f( Either[Unit, (P,P)] )     : P
+  
+  final def vide                   : P = f(Left(()))
+  final def concat(p1 : P, p2 : P) : P = f(Right((p1, p2)))
+}
+```
+```scala
+type Monoid[P] = Either[Unit, (P,P)] => P
+```
+
+----
+
+# Opérations
 
 ```scala
-def f(model : String, portes : Int, couleur : String) : R
-
-VoitureP("Corsa",3,"rouge") match {
-  case VoitureP(m, p, c) => f(m,p,c)
+trait Monoid[P] {
+  def vide                   : P
+  def concat(p1 : P, p2 : P) : P
 }
+type Monoid[P] = Either[Unit, (P,P)] => P
+```
+sont surtout équivalents à
+```scala
+sealed abstract class MonoidF[+P]
+case object Vide                       extends MonoidF[Nothing]
+case class  Concat[+P](p1 : P, p2 : P) extends MonoidF[P]
 
-VoitureI("Corsa", 3, "rouge").matcher {
-  (m, p, c) => f(m,p,c)
+type Monoid[P] = MonoidF[P] => P // MonoidF[P] <-> Either[Vide, Concat[P]]
+```
+
+----
+
+## Foncteur
+
+```scala
+sealed abstract class MonoidF[+P]
+case object Vide                       extends MonoidF[Nothing]
+case class  Concat[+P](p1 : P, p2 : P) extends MonoidF[P]
+
+new Functor[MonoidF] {
+  def map[A,B](f : A => B) : MonoidF[A] => MonoidF[B] = {
+    case Vide        => Vide
+    case Concat(x,y) => Concat(f(x), f(y)) 
+}}
+```
+- `MonoidF`-(Co)Algèbres
+ 
+```scala
+type MonoidF_Algebre[P]   = MonoidF[P] =>    P
+type MonoidF_CoAlgebre[P] =    P       => MonoidF[P]
+```
+```
+trait MonoidF_Algebre[A] {
+ def vide                   : P  // Unit  => P
+ def concat(p1 : P, p2 : P) : P  // (P,P) => P
+
+trait MonoidF_CoAlgebre[P] {
+  def decompose : MonoidF[P] // <-> Either[Unit, (P,P)]
 }
 ```
 
 ----
 
-### Somme
-*Vrai* **OU** *Faux*
-```scala
-sealed abstract class BooleenP
-case object VraiP extends BooleenP
-case object FauxP extends BooleenP
-```
+## Algèbre de Présentation
 
 ```scala
-trait BooleenI {
-  def matcher[R](vrai : R, faux : R) : R
-}
+trait Presentation[P] {
+  def vide                        : P
+  def concat(p1 : P, p2 : P)      : P
 
-val VraiI = new BooleenI { def matcher[R](vrai: R, faux: R): R = vrai }
-val FauxI = new BooleenI { def matcher[R](vrai: R, faux: R): R = faux }
-```
+  def texte(s : String)           : P    
+  def image(f: File)              : P
+  def code(lecode: String)        : P
 
-```scala
-(b : BooleenP) match {
-  case VraiP => si_vrai
-  case FauxP => si_faux
-}
+  def puces(ps : List[P])         : P
+  def grille(mat : List[List[P]]) : P
 
-(b : BooleenI).matcher
-  si_vrai,
-  si_faux
+  // concat(vide, p)          == p == concat(p, vide)
+  // concat(a, concat(b, c))  == concat(concat(a,b), c)
+  // concat(text(a), text(b)) == text(a + b)
 }
 ```
 
 ----
 
-### Types Recursifs
+# Presentation-F
 
 ```scala
-sealed abstract class TypeRecursifP
-final case class SansFinP(valeur : TypeRecursifP) extends TypeRecursifP
+sealed abstract class PresentationF[+P]
+case object Vide                            extends PresentationF[Nothing]
+case class  Concat[+P](p1 : P, p2 : P)      extends PresentationF[P]
+
+case class  Texte(s : String)               extends PresentationF[Nothing]
+case class  Image(f: File)                  extends PresentationF[Nothing]
+case class  Code(lecode: String)            extends PresentationF[Nothing]
+
+case class  Puces[+P](ps : List[P])         extends PresentationF[P]
+case class  Grille[+P](mat : List[List[P]]) extends PresentationF[P]
+
+val presentationF : Functor[PresentationF] = ...
 ```
 
 ```scala
-trait TypeRecursifI {
-  def fold[R](f : R => R) : R
-}
+type PresentationF_Algebre[P]   = PresentationF[P] =>       P
+type PresentationF_CoAlgebre[P] =       P          => PresentationF[P]
+```
 
-def SansFinI(valeur : TypeRecursifI) = new TypeRecursifI {
-  def fold[R](f : R => R) : R = valeur.fold(f)
+----
+
+### Équation de point fixe
+
+```scala
+type PresentationF_Algebre[P]   = PresentationF[P] =>       P
+type PresentationF_CoAlgebre[P] =       P          => PresentationF[P]
+```
+
+Une équation
+```scala
+P <-> F[P]
+```
+les solutions sont naturellement des algèbres *et* coalgèbres
+```scala
+P <-> F[P] <-> F[F[P]] <-> F[F[F[P]]] <-> F[F[F[F[P]]]] <-> ...
+```
+
+deux en particulier
+
+```scala
+//   Fix[F] = P, case class P(unfold : F[P])
+final case class Fix[F[_]](unfold: F[ Fix[F] ]) 
+
+// CoFix[F] = P, trait P { def unfold: F[P] }
+trait CoFix[F[_]] {
+  def unfold : F[ CoFix[F] ]
+}
+```
+
+----
+
+# Application
+`PresentationF`-Algèbre
+```scala
+// Pres <-> Fix[PresentationF]
+sealed abstract class Pres
+case object Vide                           extends Pres
+case class  Concat(p1 : Pres, p2 : Pres)   extends Pres
+
+case class  Texte(s : String)              extends Pres
+case class  Image(f: File)                 extends Pres
+case class  Code(lecode: String)           extends Pres
+
+case class  Puces(ps : List[Pres])         extends Pres
+case class  Grille(mat : List[List[Pres]]) extends Pres
+```
+`PresentationF`-CoAlgèbre
+```scala
+trait CoPres { // <-> CoFix[PresentationF]
+  def unfold : PresentationF[CoPres]
 }
 ```
 
 ---
 
+# Générateurs
 
-# (Co-)Algèbre
-
-----
-
-### Une algèbre de rédaction
+- On a un type `G` et un foncteur `F`
 
 ```scala
-trait Document[A] {
-  def vide                     : A
-  def text(s : String)         : A
-  def italique(doc : A)        : A
-  def fusion(elememts : A*)    : A
-  def lien(url : java.net.URL) : A
-  def chapitre(titre : String) : A
-  def tableDesMatieres         : A
-
-  "block()"       -> Prop(                   fusion()  == vide                       )
-  "block(a)"      -> forAll( (a:A)        => fusion(a) == a                          )
-  "block(text..)" -> forAll( (a b:String) => fusion(text(a), text(b)) == text(a ++ b))
-}
+trait G { ... }
+trait F[+_] { ... }
+val functorF : Functor[F]
 ```
 
+- Quels sont les `F`-(Co)Algèbre "contenant" `G`
+- On cherche les types `P` tels que (avec les mains)
+ - `G <: P`
+ - `P` est une `F`-Algèbre
+
 ```scala
-val documentHTML     : Document[HTML]
-val documentMarkDown : Document[MarkDown]
-val documentMarkDown : Document[LaTeX]
+trait P { ... }
+type E[+X] = Either[F[X], G]
+val pEAlgebre     : E[P] => P
+val pECoAlgebre   :  P   => E[P]
+
+val pFAlgebre     : F[P] => P  = pEAlgebre(Left(_)) 
+val gContenuDansP :  G   => P  = pEAlgebre(Right(_))
 ```
 
 ----
 
-### Abstraction du format
-
+## Application : Monoïde
 ```scala
-def livre[A](implicit A: Document[A]): A = {
-  import A._
+sealed abstract class MonoidE[+G, +P]
+case object Vide                     extends MonoidE[Nothing, Nothing]
+case class  Concat[+P](p1: P, p2: P) extends MonoidE[Nothing, P]
 
-  fusion(
-    tableDesMatieres,
-    chapitre("Premier Chapitre"),
-    fusion(
-      text("le texte du premier chapitre"),
-      lien(new java.net.URL("http://example.com"))
-    ),
-    chapitre("Deuxieme Chapitre"),
-    text("Texte du deuxième chapitre")
-  )
-}
+case class  Generateur[+G](g : G)    extends MonoidE[G, Nothing]
 ```
 
+`Fix[MonoidE[G, ?]]` = arbres binaires sur `G`
 ```scala
-val livreHTML     = livre[HTML]
-val livreMarkDown = livre[MarkDown]
-val livreLaTeX    = livre[LaTeX]
-```
+// MonoidL[G] <-> Fix[MonoidE[G, ?]]
+sealed abstract class MonoidL[+G]
 
----
-
-# Algèbre
-
-```scala
-trait AlgebrePSUG[A] {
-  def zero                        : A
-  def plus(gauche : A, droit : A) : A
-}
-```
-
-est équivalent à
-
-```scala
-sealed abstract class OperationPSUG[+A]
-case object Zero                            extends OperationPSUG[Nothing]
-case class  Plus[+A](gauche : A, droit : A) extends OperationPSUG[A]
-
-type AlgebrePSUG[A] = OperationPSUG[A] => A
+case object Vide                       extends MonoidL[Nothing]
+case class  Concat[+G](p1: MonoidL[G],
+                       p2: MonoidL[G]) extends MonoidL[G]
+                       
+case class  Generateur[+G](g : G)      extends MonoidL[G]
 ```
 
 ----
 
-### Équivalence
+# Est-ce un monoïde ?
 
 ```scala
-trait AlgebrePSUG[A] {
-  def zero               : A
-  def plus(g : A, d : A) : A
+new Monoid[ MonoidL[Int] ] {
+ def vide                                       = Vide
+ def concat(p1: MonoidL[Int], p2: MonoidL[Int]) = Concat(p1,p2)
+ // concat(vide, p)         == p == concat(p, vide)
+ // concat(a, concat(b, c)) == concat(concat(a,b), c)
 }
+```
 
-sealed abstract class OperationPSUG[+A]
-case object Zero                            extends OperationPSUG[Nothing]
-case class  Plus[+A](gauche : A, droit : A) extends OperationPSUG[A]
+`MonoidL[G]` est il un *monoide* ?
+
+```scala
+scala> Concat(Vide, Generateur(5)) == Generateur(5)
+res0: Boolean = false
+```
+**NON**
+
+----
+
+# Lois
+
+```scala
+// concat(vide, p)         == p == concat(p, vide)
+// concat(a, concat(b, c)) == concat(concat(a,b), c)
+```
+```scala
+// MonoidL[G] <-> Fix[MonoidE[G, ?]]
+sealed abstract class MonoidL[+G]
+case object Vide                       extends MonoidL[Nothing]
+case class  Concat[+G](p1: MonoidL[G],
+                       p2: MonoidL[G]) extends MonoidL[G]
+case class  Generateur[+G](g: G)       extends MonoidL[G]
+```
+
+<img src="assoc_arbre.svg" alt="Assoc Arbre" style="width: 900px"/>
+
+----
+
+# Normalisation
+
+> Ne plus tolérer deux **valeurs différentes** pour ce qui devrait être **égal** selon les **lois**.
+
+- Pour un foncteur `F`, partir de `Fix[F]`
+- Écrire une fonction de simplification telle que :
+ - Si `a` et `b` sont deux expressions qui doivent être égales selon les **lois**
+ - alors en `Scala`, ` simplifier(a) == simplifier(b)`
+
+----
+
+### Exemple : MonoidL[G]
+
+```scala
+// Concat(Vide, p)         == p == Concat(p, Vide)
+// Concat(a, Concat(b, c)) == Concat(Concat(a,b), c)
 ```
 
 ```scala
-def traitVersFonction[A](t : AlgebrePSUG[A]       ) : OperationPSUG[A] => A =
-  (opa : OperationPSUG[A]) => opa match {
-    case Zero      => t.zero
-    case Plus(g,d) => t.plus(g,d)
-  }
+def simplifier[G](x : MonoidL[G]) : MonoidL[G] = x match {
+  case Concat(Vide, a)        => a
+  case Concat(a, Vide)        => a
+  case Concat(Concat(a,b), c) => Concat(a, Concat(b,c))
+  case _                      => x
+}
+```
 
-def fonctionVersTrait[A](f : OperationPSUG[A] => A) : AlgebrePSUG[A]        =
-  new AlgebrePSUG[A] {
-    def zero              : A = f(Zero)
-    def plus(g : A, d: A) : A = f(Plus(g,d))
-  }
+En appliquant `simplifier` à tous les noeuds, il ne reste que :
+```scala
+Vide
+```
+```scala
+Concat(Generateur(t1),
+       Concat(Generateur(t2),
+              ...,
+                 Concat(Generateur(tn),
+                        Generateur(tn+1)
+                       )
+             )
+      )
 ```
 
 ----
 
-### Exemple: Unit
+### Résultat
 
 ```scala
-object UnitPSUG extends AlgebrePSUG[Unit] {
-  def zero: Unit = ()
-  def plus(gauche: Unit, droit: Unit): Unit = ()
-}
-
-zero == ()
-plus( () , () ) == ()
+sealed abstract class MonoidE[+G, +P]
+case object Vide                           extends MonoidE[Nothing, Nothing]
+case class  ConcatGen[+G,+P](hd: G, tl: P) extends MonoidE[G,P]
+```
+Respectent les lois par construction :
+```scala
+type   List[+G] =   Fix[MonoidE[+G, ?]]
+type Stream[+G] = CoFix[MonoidE[+G, ?]]
 ```
 
 ```scala
-def algebrePSUGUnit(op : OperationPSUG[Unit]) : Unit = op match {
-  case Zero      => ()
-  case Plus(g,d) => ()
-}
+sealed abstract class List[+G]
+case object Vide                              extends List[Nothing]
+case class  ConcatGen[+G](hd: G, tl: List[G]) extends List[G]
 
-algebrePSUGUnit(Zero) == ()
-algebrePSUGUnit(Plus( (), () )) == ()
-```
-
-----
-
-### Examples: Entiers
-
-```scala
-object IntPSUG extends AlgebrePSUG[Int] {
-  def zero: Int = 0
-  def plus(gauche: Int, droit: Int): Int = gauche + droit
-}
-
-zero == 0
-plus( 37 , 82 ) == 119
-```
-
-
-```scala
-def algebrePSUGInt(op : OperationPSUG[Int]) : Int = op match {
-  case Zero      => 0
-  case Plus(g,d) => g + d
-}
-
-algebrePSUGInt(Zero) == 0
-algebrePSUGInt(Plus(37, 82)) == 119
-```
-
-----
-
-### Example : Listes
-
-
-```scala
-class ListPSUG[A] extends AlgebrePSUG[List[A]] {
-  def zero: List[A] = Nil
-  def plus(gauche: List[A], droit: List[A]): List[A] = gauche ++ droit
-}
-
-zero == Nil
-plus( List(1,2) , List(3,4) ) == List(1,2,3,4)
-```
-
-```scala
-def algebrePSUGList[A](op : OperationPSUG[List[A]]) : List[A] = op match {
-  case Zero      => Nil
-  case Plus(g,d) => g ++ d
-}
-
-algebrePSUGList(Zero) == Nil
-algebrePSUGList(Plus(List(1,2), List(3,4))) == List(1,2,3,4)
-```
-
-----
-
-### Example : Fonctions
-
-```scala
-object FunPSUG extends AlgebrePSUG[Int => Int] {
-  def zero : Int => Int = (x => x)
-  def plus(g : Int => Int, d : Int => Int) : Int => Int = (x => d(g(x)))
-}
-
-zero == { x :Int => x }
-plus( (x:Int)=>x+1 , (x:Int)=>x*3 ) == { x : Int => (x+1)*3 }
-```
-
-```scala
-def algebrePSUGFun(op : OperationPSUG[Int => Int]) : Int => Int = op match {
-  case Zero      => (x => x)
-  case Plus(g,d) => (x => d(g(x)))
-}
-
-algebrePSUGFun(Zero) == { x : Int => x }
-algebrePSUGFun(Plus( (x:Int)=>x+1 , (x:Int)=>x*3 )) == { x : Int => (x+1)*3 }
-```
-
----
-
-
-# Co-Algebre
-
-```scala
-trait CoAlgebre[A] extends (A => Operation[A]) {
-  def apply(a : A) : Operation[A]
-}
-```
-
-```scala
-def decompose[A : CoAlgebre](a : A) : Operation[A]
-```
-
-
-----
-
-### Decomposition en liste
-
-```scala
-abstract sealed class OperationListe[+I, +A]
-case object Vide                             extends OperationListe[Nothing, Nothing]
-case class  Cons[I , A](tete : I, reste : A) extends OperationListe[I,A]
-```
-
-```scala
-trait CoAlgebreListe[I, A] extends (A => OperationListe[I, A]) {
-  def apply(a : A) : OperationListe[I,A]
-}
-```
-
-----
-
-### Entiers => Liste de booleens
-
-```scala
-object decompose extends CoAlgebreListe[Boolean, Long] {
-  def apply(a: Long): OperationListe[Boolean, Long] =
-    if (a <= 0) Vide
-    else Cons(a % 2 == 1, a / 2)
-}
-```
-
-```scala
-// 5 = 101
-decompose(5) == Cons(true , 2)
-decompose(2) == Cons(false, 1)
-decompose(1) == Cons(true , 0)
-decompose(0) == Vide
-```
-
-```scala
-def puissance(n : Long, p : Long) : Long = decompose(p) match {
-  case Vide           => 1
-  case Cons(false, r) => puissance(n * n, r)
-  case Cons(true , r) => puissance(n * n, r) * r
-}
-```
-
-----
-
-
-### Labyrinthe
-
-```scala
-sealed abstract  class Cas[+A]
-case object Sortie                                        extends Cas[Nothing]
-case object CulDeSac                                      extends Cas[Nothing]
-case class  Bifurcation[+A](chemin0 : (String, A),
-                            chemin1 : (String, A),
-                            chemins : List[(String , A)]) extends Cas[A]
-```
-
-```scala
-trait Labyrinthe[A] extends (A => Cas[A]) {
-  def apply(a : A) : Cas[A]
-}
-```
-
-```scala
-def parcour[A](a : A)(implicit A : Labyrinthe[A]) : Unit = A(a) match {
-    case Sortie                   => println("Gagné!")
-    case CulDeSac                 => println("Perdu!")
-    case Bifurcation(un, deux, l) =>
-      val chemins = un :: deux :: l
-      parcour(chemins(scala.io.StdIn.readInt())._2)
+trait Stream[+G] {
+  def unfold : MonoidE[+G, Stream[G]] 
 }
 ```
 
 ---
 
-# Morphisme
+# Morphismes
 
-----
-
-### Algèbre de nombres
+### `NumF`-Algèbres
 
 ```scala
-trait Num[A] extends (Op[A] => A) {
-  def zero : A
-  def un   : A
-  def plus(x : A, y : A) : A
-  def mult(x : A, y : A) : A
-}
+sealed abstract class NumF[+A]
+case object Zero                 extends NumF[Nothing]
+case object Un                   extends NumF[Nothing]
+case class  Plus[+A](g: A, d: A) extends NumF[A]
+case class  Mult[+A](g: A, d: A) extends NumF[A]
+
+val functorNumF : Functor[NumF] = ...
 ```
 
 ```scala
-sealed abstract class Op[+A] {
-   def map[B](f : A => B) : Op[B]
-}
-case object Zero               extends Op[Nothing]
-case object Un                 extends Op[Nothing]
-case class  Plus[+A](g:A, d:A) extends Op[A]
-case class  Mult[+A](g:A, d:A) extends Op[A]
+type NumF_Algebre[+A]   = NumF[A] =>   A
+type NumF_CoAlgebre[+A] =   A     => NumF[A]
 ```
 
 ----
 
-### Algèbre Num sur les entiers
+### `NumF`-Algèbre sur les entiers
 
 ```scala
-object LongNum extends Num[Long] {
-  def zero = 0
-  def un   = 1
-  def plus(gauche: Long, droite: Long): Long = gauche + droite
-  def mult(gauche: Long, droite: Long): Long = gauche * droite
+def numFLong(nl: NumF[Long]) : Long = nl match {
+  case Zero       => 0
+  case Un         => 1
+  case Plus(g, d) => g + d
+  case Mult(g, d) => g * d
 }
+```
+
+```scala
+val numFLong: NumF_Algebre[Long] = NumFLong _
 ```
 
 ----
 
-### Algèbre Num sur les listes
+### `NumF`-Algèbre  sur les listes
 
 ```scala
-object ListNum extends Num[List[Any]] {
-  def zero = Nil
-  def un   = List("")
-  def plus(gauche: List[Any], droite: List[Any]): List[Any] = gauche ++ droite
-  def mult(gauche: List[Any], droite: List[Any]): List[Any] =
-    for {
-      g <- gauche
-      d <- droite
-    } yield (g,d)
+def numFListe(ln: NumF[List[Any]]) : List[Any] = ln match {
+  case Zero       => Nil
+  case Un         => List(42)
+  case Plus(g, d) => g ++ d
+  case Mult(g, d) => for {a <- g; b <- d} yield (a,b)
 }
 ```
 
 ```scala
-plus(List(1,2,3), List('a','b')) == List(1,2,3,'a','b')
+Plus(List(1,2,3), List('a','b')) -> List(1,2,3,'a','b')
 
-mult(List(1,2,3), List('a','b')) ==
+Mult(List(1,2,3), List('a','b')) ->
   List( (1,'a'), (1,'b'),
         (2,'a'), (2,'b'),
         (3,'a'), (3,'b')
       )
 ```
 
+```scala
+val numFListe: NumF_CoAlgbre[List[Any]] = NumFListe _
+```
+
 ----
 
-### Polynomes
+### Polynômes
 
-$$3  = 1 +  1 +  1$$
-$$3X = X +  X +  X$$
-$$X³ = X \* X \* X$$
+- Entiers naturels  
+ $$3  = (1 +  1) +  1$$
+- Addition
+ $$3X = (X +  X) +  X$$
+- Puissances
+ $$X³ = (X \* X) \* X$$
 
-- On peut calculer le polynome sur les valeurs de type `A`
+- On peut calculer le polynôme sur les valeurs de type `A`
 $$P(X : A) = 4X⁹ + 8X³$$
 
  - `P(11) = 9 431 801 412`
- - `P(List(0,1,2,3,4,5,6,7,8,9,10))` = une liste de `9 431 801 412` elements.
+ - `P(List(0,1,2,3,4,5,6,7,8,9,10))` = une liste de `9431801412` elements.
 
 ----
 
@@ -611,7 +589,7 @@ $$P(X : A) = 4X⁹ + 8X³$$
 
 ```scala
 taille(Nil        ) == 0
-taille(List("")   ) == 1
+taille(List(42)   ) == 1
 taille(l1 ++ l2   ) == taille(l1) + taille(l2)
 taille(mult(l1,l2)) == taille(l1) * taille(l2)
 ```
@@ -619,31 +597,34 @@ taille(mult(l1,l2)) == taille(l1) * taille(l2)
 
 ----
 
-### Preservation
+### Préservation
 
 ```scala
-val algList : Op[List] => List = ListNum
-val algLong : Op[Long] => Long = LongNum
+type Liste = List[Any]
 
-val oplist : Op[List] = Plus(List(1,2,3) , List('a','b'))
+val longNumF: NumF[Long ] => Long
+val listNumF: NumF[Liste] => Liste
 
+val nl: NumF[Liste] = Plus(List(1,2,3) , List('a','b'))
+```
+
+```scala
 // Sur les listes
-val x = algList(oplist)
+val x = listNumF(nl)
       = List(1,2,3) ++ List('a','b') = List(1,2,3,'a','b')
 
 taille( x ) == 5
 
 // Sur les entiers
-val y = oplist.map(taille)
+val y = nl.map(taille)
       = Plus(taille(List(1,2,3)) , taille(List('a','b')) == Plus(3, 2)
 
-algLong( y ) == 3 + 2 == 5
+longNumF( y ) == 3 + 2 == 5
 ```
 
 ```scala
-forAll{ (oplist : Op[List]) =>
-  taille( algList(oplist) : List ) == algLong( oplist.map(taille) : Op[Long])
-}
+∀(nl:NumF[Liste]),
+  taille(listNumF(nl): Liste) == longNumF(nl.map(taille): NumF[Long])
 ```
 
 ----
@@ -651,7 +632,7 @@ forAll{ (oplist : Op[List]) =>
 ### Comme ...
 
 ```scala
-val oplist : Op[List] = Plus(List(1,2,3) , List('a','b'))
+val nl: NumF[Liste] = Plus(List(1,2,3) , List('a','b'))
 ```
 
 <img src="op_commut.svg" alt="Num Op Commut" style="width: 900px"/>
@@ -661,20 +642,20 @@ val oplist : Op[List] = Plus(List(1,2,3) , List('a','b'))
 ### ... Alors!
 
 ```scala
-def f[A : Num](a : A) : A // En supposant que 'f' logiquement fondée!
+def f[X](implicit algX : NumF[X] => X): X => X
 ```
 
 <img src="morph_commut.svg" alt="Num Op Commut" style="width: 900px"/>
 
 ----
 
-### Morphisme de co-algèbre
+### Morphisme de CoAlgèbre
 
 ```scala
-def coAlgA(a : A) : Op[A] // Co-Algèbre `Op` sur A
-def coAlgB(b : B) : Op[B] // Co-Algèbre `Op` sur A
+def coAlgA: A => F[A] // F-CoAlgèbre sur A
+def coAlgB: B => F[B] // F-CoAlgèbre sur A
 
-def fAB(a : A) : B        // Une fonction de A vers B
+def fAB: A => B       // Une fonction de A vers B
 ```
 
 <img src="coop_commut.svg" alt="CoAlg Commut" style="width: 900px"/>
@@ -685,378 +666,104 @@ def fAB(a : A) : B        // Une fonction de A vers B
 
 
 ```scala
-def algA(a : Op[A]) : A // Algèbre `Op` sur A
-def algB(b : Op[B]) : B // Algèbre `Op` sur A
-def bijAB : A <=> B // Une bijection entre A et B
+def algA : F[A] => A // F-Algèbre sur A
+def algB : F[B] => B // F-Algèbre sur A
 
-def f[A](a:A) : A
+def bijAB : A <-> B  // Une bijection entre A et B
+
+def f[X](implicit algX : F[X] => X) : X => X
 ```
 
 <img src="op_iso.svg" alt="Op Iso"     style="width: 500px; height: 300px;"/>
 <img src="iso_commut.svg" alt="Iso Commut" style="width: 500px; height: 300px;"/>
 
-----
-
-### En résumé
-
-- *Morphisme*
- - **Structure** d'une (co-)algèbre `A` est **contenue** dans une (co-)algèbre `B`
- - **Préserve** les opérations/égalités d'une (co-)algèbre `A` vers une (co-)algèbre `B`
-- *IsoMorphisme*
- - Deux **structures** de (co-)algèbres sont **équivalentes**
- - Tout ce qui se fait dans l'une, se fait **identiquement** dans l'autre
-
----
-
-# Structures Initiales/Finales
 
 ----
 
-### Construire la (co-)alèbre la plus générale.
+## Objets Initiaux/Terminaux
 
-Opérations
+- **F-Algèbre Initiale** `I`
+ - ∀ *F-Algèbre* `O`, ∃ *un* et *un seul* morphisme: `I => O`
+- **F-CoAlgèbre Terminale** `T`
+ - ∀ *F-CoAlgèbre* `O`, ∃ *un* et *un seul* morphisme: `O => T`
+- Si elles existent, `T <-> F[T]` et `I <-> F[I]`
+
 ```scala
-sealed abstract class OperationPSUG[+A]
-case object Zero                            extends OperationPSUG[Nothing]
-case class  Plus[+A](gauche : A, droit : A) extends OperationPSUG[A]
+final case class Fix[F[_]](value : F[ Fix[F] ])
+ 
+def fold[F[_] : Functor, A : Algebre[F, ?]] : Fix[F] => A =
+  (fa : Fix[F]) => Algebre[F,A](fa.value.map(fold[F,A]))
 ```
 
-Algèbre
 ```scala
-trait AlgebrePSUG[A] extends (OperationPSUG[A] => A) {
-  def zero           : A = this(Zero)
-  def plus(g:A, d:A) : A = this(Plus(g, d))
+trait CoFix[F[_]]  {
+  def unfold : F[ CoFix[F] ]
 }
-```
 
-Co-Algèbre
-```scala
-trait CoAlgebrePSUG[A] extends (A => OperationPSUG[A]) {
-  def apply(a : A) : OperationPSUG[A]
-}
+def unfold[F[_]: Functor, A : CoAlgebra[F, ?]] : A => GFix[F] =
+  (a : A) => new GFix[F] {
+    lazy val unfold : F[GFix[F]] = CoAlgebre[F,A](a).map(unfold[F,A])
+  }
 ```
 
 ----
 
-### Algèbre la plus générale
+# MonoidE-(Co)Algèbres
 
 ```scala
-trait AlgebrePSUG[A] {
-  def zero           : A
-  def plus(g:A, d:A) : A
-}
-```
-- `InitialPSUG` ne contient que le **nécessaire** pour être une `AlgebrePSUG`!
- - Plus **petit** ensemble **construit** à partir de `Zero` et `Plus`
- - Plus **petit point fixe** de `OperationPSUG`
-   - `InitialPSUG = OperationPSUG[InitialPSUG]`
-   - Les **combinaisons finies** de `Zero` et `Plus`
-- Toute algèbre `AlgebrePSUG` contient la structure de `InitialPSUG`
- - **Unique morphisme de** `InitialPSUG` **vers** chaque `AlgebrePSUG`
-
-----
-
-### Algèbre la plus générale
-
-Combinaisons finies de `Zero` et `Plus`
-```scala
-abstract sealed class InitialPSUG
-case object Zero                                            extends InitialPSUG // Vide
-case class  Plus(gauche : InitialPSUG, droit : InitialPSUG) extends InitialPSUG // Noeud
-
-type InitialPSUG = OperationPSUG[InitialPSUG]
+sealed abstract class MonoidE[+G, +P]
+case object Vide                           extends MonoidE[Nothing, Nothing]
+case class  ConcatGen[+G,+P](hd: G, tl: P) extends MonoidE[G,P]
 ```
 
-Principe de récurence
+```scala
+sealed abstract class  List[+G]
+final case object Vide                              extends List[Nothing]
+final case class  ConcatGen[+G](hd: G, tl: List[G]) extends List[G]
+
+// MonoidE[G,A] => A <-> (A, (G,A) => A) 
+def fold[G, A](algebreA : MonoidE[G, A] => A    ): List[G] => A
+def fold[G, A](vide : A, concatGen : (G, A) => A): List[G] => A
+```
 
 ```scala
-trait InitialPSUG {
-   def fold[A : AlgebrePSUG] : A
-// def fold[A](zero : A)(plus : (A,A) => A) : A
+trait Stream[+G] {
+  def unfold : MonoidE[G, Stream[G]]
 }
 
-def uniqueMorphisme[A : AlgebrePSUG](i : InitialPSUG) : A = i.fold[A]
-
-def uniqueMorphisme[A](zero : A)(plus : (A,A) => A) : InitialPSUG => A
-```
-
-----
-
-### Co-Algèbre la plus générale
-
-```scala
-sealed abstract class OperationPSUG[+A]
-case object Zero                            extends OperationPSUG[Nothing]
-case class  Plus[+A](gauche : A, droit : A) extends OperationPSUG[A]
-```
-
-```scala
-trait CoAlgebrePSUG[A] extends (A => OperationPSUG[A]) {
-  def apply(a : A) : OperationPSUG[A]
-}
-```
-
-- `FinalCoPSUG` ne contient que les deconstructions **nécessaire**!
-  - Les combinaisons finies et **infinies** de `Zero` et `Plus`
-- Toute co-algèbre `AlgebrePSUG` contient la structure de `FinalCoPSUG`
- - **Unique morphisme depuis** chaque `AlgebrePSUG` vers `FinalCoPSUG`
-
-----
-
-### Co-Algèbre la plus générale
-
-
-```scala
-trait FinalCoPSUG {
-  def matcher : OperationPSUG[FinalCoPSUG]
-}
-
-def uniqueMorphisme[A : CoAlgebrePSUG](a : A) : FinalCoPSUG
-
-def uniqueMorphisme[A](ana : A => OperationPSUG[A]) : A => FinalCoPSUG
-```
-
-Combinaisons finies
-```scala
-val ZeroI                               = new FinalCoPSUG { def matcher = Zero }
-def PlusI(g:FinalCoPSUG, d:FinalCoPSUG) = new FinalCoPSUG { def matcher = Plus(g,d) }
-```
-
-et infinies
-```scala
-def infini : FinalCoPSUG = new FinalCoPSUG {
-  def matcher = Plus(infini, infini)
-}
-```
-
-
----
-
-
-# Liberté
-
-- **But**:
- - Pour un type `T` (exemple: `T = Char`).
- - Dotter `T` d'une structure de `(Co)AlgebrePSUG`
-- **Comment**:
- - En trouvant la `(Co)AlgebrePSUG` "la plus générale" **contenant** `T`.
- - Nouvelle opération `Elem(t : T):OperationPSUG[Nothing]`
-
-----
-
-### Ajout
-
-Pour un type `T` donné.
-
-```scala
-sealed abstract class OperationLibrePSUG[+A]
-case object Zero                            extends OperationLibrePSUG[Nothing]
-case class  Plus[+A](gauche : A, droit : A) extends OperationLibrePSUG[A]
-case class  Elem(t  : T)                    extends OperationLibrePSUG[Nothing]
-```
-
-```scala
-trait AlgebreLibrePSUG[A] extends (OperationLibrePSUG[A] => A) {
- def zero           : A
- def plus(g:A, d:A) : A
- def elem(t : T)    : A
-}
-```
-
-```scala
-trait CoAlgebreLibrePSUG[A] extends (A => OperationLibrePSUG[A]) {
- def apply(a : A) : OperationLibrePSUG[A]
-}
-```
-
-----
-
-### Résultat
-
-Pour un type `T` donné.
-
-```scala
-abstract sealed class LibrePSUG
-case object Zero                               extends LibrePSUG // Vide
-case class  Plus(g : LibrePSUG, d : LibrePSUG) extends LibrePSUG // Noeud(gauche, droit)
-case class  Elem(t : T)                        extends LibrePSUG // Feuille(t)
-```
-
-```scala
-trait LibrePSUG {
-   def fold[A : AlgebreLibrePSUG] : A
-// def fold[A](zero : A)(plus : (A,A) => A)(elem : T => A) : A
-// def fold[A : AlgebrePSUG](elem : T => A) : A
-}
-```
-
-```scala
-trait CoLibrePSUG {
-  def matcher : OperationLibrePSUG[CoLibrePSUG] // Vide ou Noeud ou Feuille
-}
+def unfold[G,A](coAlgebre : A => MonoidE[G,A]) : A => Stream[G]
 ```
 
 ---
 
-# Lois
+# Conclusion
 
-```scala
-trait Monoid[A] extends AlgebrePSUG[A]{
-  def zero : A
-  def plus(g:A, d:A) : A
+> Tout est possible ... du moment que c'est cohérent!
 
-  def lois = new SimpleRuleSet("monoid",
-    "0 + a = a" -> forAll( (a:A) => plus(zero, a) == a),
-    "a + 0 = a" -> forAll( (a:A) => plus(a, zero) == a),
-    "(a+b)+c = a+(b+c)" ->
-      forAll( (a:A,b:A,c:A) => plus(plus(a, b), c) == plus(a, plus(b,c))) )
-}
-```
-
-----
-
-### Faux!
-
-```scala
-abstract sealed class LibrePSUG
-case object Zero                               extends LibrePSUG // Vide
-case class  Plus(g : LibrePSUG, d : LibrePSUG) extends LibrePSUG // Noeud(gauche, droit)
-case class  Elem(t : T)                        extends LibrePSUG // Feuille(t)
-```
-
-```scala
-"(a+b)+c = a+(b+c)" ->
-  forAll( (a:A,b:A,c:A) => plus(plus(a, b), c) == plus(a, plus(b,c))) )
-```
-
-<img src="assoc_arbre.svg" alt="Assoc Arbre" style="width: 900px"/>
-
-----
-
-### Normalisation
-
-````scala
-"0+a     = a"      ->forAll((a:A) => plus(zero, a) == a )
-"a+0     = a"      ->forAll((a:A) => plus(a, zero) == a )
-"(a+b)+c = a+(b+c)"->forAll((a:A,b:A,c:A) => plus(plus(a, b), c) == plus(a, plus(b,c)))
-```
-
-```scala
-def simplifier(x : LibrePSUG) : LibrePSUG = x match {
-  case Plus(Zero, a)      => a
-  case Plus(a, Zero)      => a
-  case Plus(Plus(a,b), c) => Plus(a, Plus(b,c))
-  case _                  => x
-}
-```
-
-Formes normales:
-- `Zero`
-- `Plus(Elem(t1), Plus(Elem(t2), ... Plus(Elem(tn), Elem(tn+1))))`
-
-----
-
-### Formes Normales
-
-```scala
-sealed abstract class MonoidLibre
-case object Zero                                    extends MonoidLibre
-case class  PlusEnum(tete : T, reste : MonoidLibre) extends MonoidLibre
-```
-
-- Uniquement le nécessaire (`Zero` et `Plus`)
-- Respecte toutes les lois.
-- Unique morphisme d'algèbre vers chaque monoid.
-
-```scala
-def uniqueMorphisme[A : Monoid](elem : T => A) : MonoidLibre => A
-```
-
-----
-
-### Liste
-
-- `List[T]`
- - `Moinoid` libre sur le type `T`
- - algèbre la plus générale de `AlgebreListeT`
-
-```scala
-trait AlgebreListeT[+A] {
-  def vide                    : A
-  def cons(hd : T, reste : A) : A
-}
-```
-
-IsoMorphisme
-
-```scala
-sealed abstract class MonoidLibre
-case object Zero                                    extends MonoidLibre
-case class  PlusEnum(tete : T, reste : MonoidLibre) extends MonoidLibre
-```
-
-```scala
-trait MonoidLibre {
-   def fold[A : AlgebreListeT] : A
-// def fold[A](vide : A)(cons : (T, A) => A) : A
-}
-```
-
-----
-
-### Lois : Co-Algèbre
-
-```scala
-trait CoAlgebreMonoid[A] extends CoAlgebrePSUG[A] {
-  def apply(a : A) : OperationPSUG[A]
-
-  // Pour n'importe quelle décomposition de `x:A`
-  Plus(Zero, a) == a
-  Plus(a, Zero) == a
-  Plus(Plus(a, b), c) == Plus(a, Plus(b,c)))
-}
-```
-
-Formes normales
-```scala
-sealed abstract class OperationCoAlgebreMonoid[+A]
-case object Zero                             extends OperationCoAlgebreMonoid[Nothing]
-case class  PlusElem[+A](tete: T, reste : A) extends OperationCoAlgebreMonoid[A]
-
-trait CoAlgebreMonoid[A] extends (A => OperationCoAlgebreMonoid[A]) {
-  def apply(a : A) : OperationCoAlgebreMonoid[A]
-}
-```
-
-----
-
-### Stream
-
-
-- `Stream[T]`
- - Co-algèbre `Monoid` co-libre sur le type `T`
- - Co-algèbre la plus générale de `CoAlgebreListeT`
-
-```scala
-trait CoAlgebreListeT[+A] extends (A => OperationListeT[A]) {
-  def apply(a : A) : OperationListeT[A]
-}
-
-sealed abstract class OperationListeT[+A]
-case object Vide                     extends OperationListeT[Nothing]
-case class  Cons(tete: T, reste : A) extends OperationListeT[A]
-```
-
-```scala
-trait Stream {
-   def matcher : OperationListeT[Stream]
-// def matcher[B](vide : B)(cons : (T, Stream) =>  B) : B
-}
-```
+- *Abstraire* c'est souligner le *pertinent*, l'**essentiel**
+ - Rendez **l'intention** visible
+ - Faites apparaître les **concepts** *metiers*
+- Comme tout saut conceptuel :
+ - il y a un coût d'apprentissage initial
+ - mais aussi de grands bénéfices
+ 
+> It's mathematics all the way down
 
 ---
 
-# Application
+# Merci
+
+*Christophe Calvès* [@chrilves](http://twitter.com/chrilves) / [MFG Labs](http://mfglabs.com)
+
+https://github.com/chrilves/f-algebra-talk.git
+
+---
+
+# Annexes
+
+---
+
+# Free(er) Monads
 
 ----
 
@@ -1236,23 +943,6 @@ case class FlatMap[A,B](e : F[A], f : A => MonadePlusLibre[B]) extends MonadePlu
 def uniqueMorphisme[M[_] : MonadeSurF, A]                    : MonadePlusLibre[A] => M[A]
 def uniqueMorphisme[M[_] : Monad     , A](elem : Poly[F, M]) : MonadePlusLibre[A] => M[A]
 ```
-
----
-
-# Conclusion
-
-- *Spécification*
-  - **Opérations** de vôtre domaine?
-  - **Lois** à garantir?
-- *Réalisation*
-  - Représentation par des (Co-)Algébres **initiales/finales**, (Co-)Libres
-  - Garantir les lois en trouvant les **formes normales**
-- *Cadeau Bonus*
-  - **Morphisme** vers/depuis n'importe quelle instance.
-
----
-
-# Annexes
 
 ---
 
