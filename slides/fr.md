@@ -16,6 +16,7 @@
 ### des énumérations aux algèbres libres
 
 *Christophe Calvès* [@chrilves](http://twitter.com/chrilves) / [MFG Labs](http://mfglabs.com)
+
 https://github.com/chrilves/f-algebra-talk.git
 
 ----
